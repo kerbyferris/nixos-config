@@ -19,24 +19,70 @@
   # Define on which hard drive you want to install Grub.
   boot.loader.grub.device = "/dev/mmcblk0";
 
-  networking.hostName = "nixos"; # Define your hostname.
-  networking.networkmanager.enable = true;
+  networking = {
+    hostName = "nixos"; # Define your hostname.
+    # networkmanager.enable = true;
+    wireless.enable = true;
+  };
 
   # Select internationalisation properties.
-  # i18n = {
-  #   consoleFont = "Lat2-Terminus16";
-  #   consoleKeyMap = "us";
-  #   defaultLocale = "en_US.UTF-8";
-  # };
+  i18n = {
+    consoleFont = "Lat2-Terminus16";
+    consoleKeyMap = "us";
+    defaultLocale = "en_US.UTF-8";
+  };
 
   # Set your time zone.
   time.timeZone = "America/Los_Angeles";
 
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
-  # environment.systemPackages = with pkgs; [
-  #   wget
-  # ];
+  environment.systemPackages = with pkgs; [
+    ansible
+    chromium
+    curl
+    dmenu
+    dzen2
+    docker
+    emacs
+    file
+    gitAndTools.gitFull
+    gnupg
+    htop
+    neovim
+    perl
+    python
+    rxvt_unicode
+    # stalonetray
+    tmux
+    tree
+    vagrant
+    vim
+    vlc
+    xterm
+    wget
+  ] ++ (with haskellPackages; [
+    ghc
+    xmobar
+  ]);
+
+  nixpkgs.config = {
+    allowUnfree = true;
+
+    chromium = {
+      enablePepperFlash = true;
+      enablePepperPDF = true;
+    };
+  };
+
+  programs = {
+    bash.enableCompletion = true;
+  };
+
+  environment.sessionVariables = {
+    EDITOR = "nvim";
+    NIXPKGS_ALLOW_UNFREE = "1";
+  };
 
   # List services that you want to enable:
   services.nixosManual.showManual = true;
@@ -52,21 +98,50 @@
 
   # Enable CUPS to print documents.
   # services.printing.enable = true;
+  services.xserver = {
+    # Enable the X11 windowing system.
+    enable = true;
+    layout = "us";
+    synaptics = {
+      enable = true;
+      twoFingerScroll = true;
+      horizontalScroll = false;
+      palmDetect = true;
+      buttonsMap = [ 1 3 2 ];
+      tapButtons = false;
+      additionalOptions = ''
+        Option "VertScrollDelta" "-180"
+        Option "HorizScrollDelta" "-180"
+        Option "disableWhileTyping" "true"
+        '';
+    };
 
-  # Enable the X11 windowing system.
-  services.xserver.enable = true;
-  services.xserver.layout = "us";
-  # services.xserver.xkbOptions = "eurosign:e";
-  # services.xserver.xkbOptions = "grp:alt_space_toggle, super:ctrl";
-  services.xserver.synaptics.enable = true;
-  services.xserver.synaptics.twoFingerScroll = true;
-  services.xserver.synaptics.palmDetect = true;
-  services.xserver.libinput.naturalScrolling = true;
-  services.xserver.libinput.disableWhileTyping = true;
+    # Enable a Desktop Environment.
+    windowManager = {
+      xmonad = {
+        enable = true;
+        enableContribAndExtras = true;
+        extraPackages = haskellPackages: [
+            haskellPackages.xmonad-contrib
+            haskellPackages.xmonad-extras
+            haskellPackages.xmonad
+        ];
+      };
+      default = "xmonad";
+    };
 
-  # Enable the KDE Desktop Environment.
-  services.xserver.displayManager.sddm.enable = true;
-  services.xserver.desktopManager.plasma5.enable = true;
+    displayManager = {
+      slim.enable = true;
+      auto = {
+        enable = true;
+        user = "barbara";
+      };
+      sessionCommands = ''
+        ${pkgs.xlibs.xmodmap}/bin/xmodmap ~/.Xmodmap 
+        ${pkgs.xlibs.xrdb}/bin/xrdb -merge ~/.Xresources 
+      '';
+    };
+  };
 
   # Define a user account.
   users.extraUsers.barbara = {
@@ -85,7 +160,34 @@
   security.sudo.enable = true;
   security.sudo.configFile = "barbara ALL=(ALL) NOPASSWD: ALL";
 
+  # Audio
   hardware.pulseaudio.enable = true;
+  hardware.pulseaudio.package = pkgs.pulseaudioFull;
+  hardware.pulseaudio.extraConfig = ''
+    load-module module-switch-on-connect
+    '';
+
+  powerManagement.enable = true;
+
+  fonts = {
+      enableCoreFonts = true;
+      enableFontDir = true;
+      enableGhostscriptFonts = true;
+      fonts = with pkgs; [
+          anonymousPro
+          corefonts
+          dejavu_fonts
+          emojione
+          freefont_ttf
+          nerdfonts
+          liberation_ttf
+          powerline-fonts
+          source-code-pro
+          terminus_font
+          ttf_bitstream_vera
+          ubuntu_font_family
+      ];
+  };
 
   # The NixOS release to be compatible with for stateful data such as databases.
   system.stateVersion = "17.03";
